@@ -39,19 +39,28 @@ func main() {
 		}
 	})
 
-	http.HandleFunc("/fe", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "websockets.html")
-	})
+	http.HandleFunc("/upload", ws)
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		// TODO: Remove this checkOrigin thinge later.
-		// Added it for local testing.
-		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+	fmt.Println("Starting server on Port 5050..")
 
-		conn, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			log.Fatalln("Upgrader Fatal error: ", err)
-		}
+	http.ListenAndServe(":5050", nil)
+}
+
+func ws(w http.ResponseWriter, r *http.Request) {
+	// TODO: Remove this checkOrigin thinge later.
+	// Added it for local testing.
+	fmt.Println("KSS: Handle /upload")
+	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Fatalln("Upgrader Fatal error: ", err)
+	}
+	renderer(conn)
+}
+
+func renderer(conn *websocket.Conn) {
+	for {
 		msgType, msg, err := conn.ReadMessage()
 		if err != nil {
 			log.Fatalln("Read message error: ", err)
@@ -62,12 +71,10 @@ func main() {
 			f := writeBinFile(msg)
 			readBinaryFile(f)
 
+		} else {
+			fmt.Println("got the some other data\n")
 		}
-	})
-
-	fmt.Println("Starting server on Port 5050..")
-
-	http.ListenAndServe(":5050", nil)
+	}
 }
 
 func readBinaryFile(a string) {
@@ -93,19 +100,19 @@ func writeBinFile(b []byte) string {
 		Type         string
 	}
 
-	exp := []byte{0x18, 0x2d, 0x44, 0x54, 0xfb, 0x21, 0x09, 0x40}
-	fmt.Println("writing bytes: %X", b)
+	// exp := []byte{0x18, 0x2d, 0x44, 0x54, 0xfb, 0x21, 0x09, 0x40}
+	// fmt.Println("writing bytes: %X", b)
 	i := bytes.Split(b, []byte("\r\n\r\n"))
-	fmt.Println("i[0] : ", i[0])
-	fmt.Println("expe    bytes: %X", exp)
-	fmt.Println("i[1] : ", i[1])
+	// fmt.Println("i[0] : ", i[0])
+	// fmt.Println("expe    bytes: %X", exp)
+	// fmt.Println("i[1] : ", i[1])
 
 	hdr := bytes.Split(i[0], []byte("!"))
-	fmt.Println("ENCODING: ", hdr[0])
-	fmt.Println("HDR: ", hdr[1])
-	jr := json.RawMessage(hdr[1])
-	fmt.Println("RAW JSON: ", jr)
-	fmt.Println("RAW JSON: ", string(jr))
+	// fmt.Println("ENCODING: ", hdr[0])
+	// fmt.Println("HDR: ", hdr[1])
+	// jr := json.RawMessage(hdr[1])
+	// fmt.Println("RAW JSON: ", jr)
+	// fmt.Println("RAW JSON: ", string(jr))
 
 	fldetails := &FileDetails{}
 	_ = json.Unmarshal(hdr[1], fldetails)
